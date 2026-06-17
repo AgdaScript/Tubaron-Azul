@@ -45,6 +45,9 @@ class CinematicScene(GameScene):
         self.app.GetAudio().PlayMusic(theme.MUSIC_OPENING, theme.MUSIC_OPENING_VOLUME)
 
     def HandleEvent(self, event: pygame.event.Event) -> None:
+        if self.HandleMuteInput(event):
+            return
+
         if event.type == pygame.MOUSEBUTTONDOWN:
             self._Finish()
         elif event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_SPACE, pygame.K_RETURN, pygame.K_z):
@@ -90,6 +93,7 @@ class CinematicScene(GameScene):
             surface.blit(veil, (0, 0))
 
         DrawTextWithOutline(surface, self.ctx.fonts.GetBody(18), "ESPAÇO para saltar", (theme.SCREEN_WIDTH - 220, theme.SCREEN_HEIGHT - 30), theme.OFF_WHITE, theme.INK, 1)
+        self.DrawMuteControl(surface)
 
     def _DrawStatic(self, surface: pygame.Surface, t: float) -> None:
         density = int(2600 * (1.0 - t))

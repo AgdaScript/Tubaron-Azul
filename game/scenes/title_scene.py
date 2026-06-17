@@ -44,6 +44,9 @@ class TitleScene(GameScene):
         self._elapsed += dt
 
     def HandleEvent(self, event: pygame.event.Event) -> None:
+        if self.HandleMuteInput(event):
+            return
+
         if event.type != pygame.KEYDOWN:
             return
 
@@ -101,3 +104,4 @@ class TitleScene(GameScene):
         DrawTextWithOutline(surface, self.ctx.fonts.GetBold(22), "Os Tubarões Azuis — futebol ao vivo", (66, 206), theme.CV_WHITE, theme.INK, 2)
         self._menu.Draw(surface, self.ctx.fonts, self.ctx.cursor, (96, 250), 300)
         DrawTextWithOutline(surface, self.ctx.fonts.GetBody(18), "Setas / WASD  -  Enter para confirmar", (200, 506), theme.OFF_WHITE, theme.INK, 1)
+        self.DrawMuteControl(surface)

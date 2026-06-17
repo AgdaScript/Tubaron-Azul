@@ -19,6 +19,9 @@ class RecordsScene(GameScene):
         self._elapsed += dt
 
     def HandleEvent(self, event: pygame.event.Event) -> None:
+        if self.HandleMuteInput(event):
+            return
+
         if event.type != pygame.KEYDOWN:
             return
 
@@ -30,6 +33,7 @@ class RecordsScene(GameScene):
         DrawHeaderBanner(surface, self.ctx.fonts, "RECORDES", "Os melhores Mundiais")
         self._DrawEntries(surface)
         DrawTextWithOutline(surface, self.ctx.fonts.GetBody(18), "Enter para voltar", (44, 506), theme.OFF_WHITE, theme.INK, 1)
+        self.DrawMuteControl(surface)
 
     def _DrawEntries(self, surface: pygame.Surface) -> None:
         font = self.ctx.fonts.GetBold(26)

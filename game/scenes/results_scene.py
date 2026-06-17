@@ -49,6 +49,9 @@ class ResultsScene(GameScene):
         self._elapsed += dt
 
     def HandleEvent(self, event: pygame.event.Event) -> None:
+        if self.HandleMuteInput(event):
+            return
+
         if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_z):
             self._Advance()
 
@@ -97,6 +100,7 @@ class ResultsScene(GameScene):
         pfont = self.ctx.fonts.GetBold(24)
         pw = pfont.size(prompt)[0]
         DrawTextWithOutline(surface, pfont, prompt, (theme.SCREEN_WIDTH // 2 - pw // 2, 472), theme.CV_YELLOW, theme.INK, 2)
+        self.DrawMuteControl(surface)
 
 
 class TournamentEndScene(GameScene):
@@ -122,10 +126,14 @@ class TournamentEndScene(GameScene):
         self._elapsed += dt
 
     def HandleEvent(self, event: pygame.event.Event) -> None:
+        editing_name = not self._saved and self._qualifies
+        if self.HandleMuteInput(event, allow_key=not editing_name):
+            return
+
         if event.type != pygame.KEYDOWN:
             return
 
-        if not self._saved and self._qualifies:
+        if editing_name:
             self._EditName(event)
 
         if event.key in (pygame.K_RETURN, pygame.K_SPACE):
@@ -182,6 +190,7 @@ class TournamentEndScene(GameScene):
         pfont = self.ctx.fonts.GetBold(24)
         pw = pfont.size(prompt)[0]
         DrawTextWithOutline(surface, pfont, prompt, (theme.SCREEN_WIDTH // 2 - pw // 2, 474), theme.CV_YELLOW, theme.INK, 2)
+        self.DrawMuteControl(surface)
 
     def _DrawNameEntry(self, surface: pygame.Surface) -> None:
         label = "Novo recorde! Escreve o teu nome:"

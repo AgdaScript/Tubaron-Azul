@@ -21,6 +21,9 @@ class PauseScene(GameScene):
         return False
 
     def HandleEvent(self, event: pygame.event.Event) -> None:
+        if self.HandleMuteInput(event):
+            return
+
         if event.type != pygame.KEYDOWN:
             return
 
@@ -51,3 +54,4 @@ class PauseScene(GameScene):
         tw = font.size(title)[0]
         DrawTextWithOutline(surface, font, title, (theme.SCREEN_WIDTH // 2 - tw // 2, 120), theme.CV_WHITE, theme.INK, 4)
         self._menu.Draw(surface, self.ctx.fonts, self.ctx.cursor, (theme.SCREEN_WIDTH // 2 - 150, 250), 300)
+        self.DrawMuteControl(surface)

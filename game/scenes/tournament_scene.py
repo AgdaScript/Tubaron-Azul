@@ -34,6 +34,9 @@ class TournamentScene(GameScene):
         self._elapsed += dt
 
     def HandleEvent(self, event: pygame.event.Event) -> None:
+        if self.HandleMuteInput(event):
+            return
+
         if event.type != pygame.KEYDOWN:
             return
 
@@ -65,6 +68,7 @@ class TournamentScene(GameScene):
         self._DrawNextMatch(surface, state)
 
         DrawTextWithOutline(surface, self.ctx.fonts.GetBody(18), "Enter: entrar em campo    Esc: guardar e sair", (40, 508), theme.OFF_WHITE, theme.INK, 1)
+        self.DrawMuteControl(surface)
 
     def _DrawRoad(self, surface: pygame.Surface, state) -> None:
         top = 132
