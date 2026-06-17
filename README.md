@@ -92,7 +92,7 @@ teu trabalho é marcar do outro lado.
 
 ---
 
-## 👕 Os plantéis: um kit, todas as seleções
+## As selecoes
 
 Existe **uma única arte-base** (renders em pixel da seleção de Cabo Verde). Todas as
 outras seleções são **geradas por recoloração em tempo de execução**: a camisola azul
