@@ -1,9 +1,10 @@
 from __future__ import annotations
+import os
 from dataclasses import dataclass
 import pygame
 from engine.resources.asset_manager import AssetManager
 from engine.input.input_manager import InputManager
-from engine.audio.audio_manager import AudioManager, MUSIC_END_EVENT
+from engine.audio.audio_manager import AudioManager
 from engine.scene.scene_stack import SceneStack
 from engine.scene.scene import Scene
 
@@ -25,8 +26,8 @@ class Application:
     """
 
     def __init__(self, config: AppConfig) -> None:
-        pygame.init()
         self._InitMixer()
+        pygame.init()
         self._config = config
         self._screen = pygame.display.set_mode((config.width, config.height))
         pygame.display.set_caption(config.title)
@@ -38,8 +39,36 @@ class Application:
         self._scenes = SceneStack()
 
     def _InitMixer(self) -> None:
+        # Must run before pygame.init(): that call brings the mixer up and opens
+        # the output device, and once it is initialised these settings (and the
+        # PulseAudio env var below) are read too late to take effect.
+        #
+        # On WSL, sound leaves the Linux side through a PulseAudio/PipeWire
+        # bridge to the Windows host. That client connection has its own buffer,
+        # separate from pygame's mixer buffer, and its default is small enough
+        # that it underruns on the bridge -- not at once, but as timing slowly
+        # slips, which is why the music plays for a while and then crackles and
+        # cuts. PULSE_LATENCY_MSEC tells libpulse to hold a larger cushion, which
+        # is the standard cure for WSL audio dropout. setdefault keeps it
+        # overridable from the environment for tuning. It is harmless off WSL
+        # (libpulse only honours it when the PulseAudio backend is in use).
+        os.environ.setdefault("PULSE_LATENCY_MSEC", "90")
+
+        # The audible fault is the music stuttering/skipping after a minute or so
+        # while the game keeps animating perfectly smoothly. Audio that breaks up
+        # on its own, independent of the visuals, is the output device buffer
+        # underrunning: the SDL audio callback now and then arrives late and the
+        # device has nothing fresh to play, so it repeats or skips. The size of
+        # that buffer is the only thing that governs it -- a bigger buffer is
+        # filled in fewer, larger callbacks, so a late one still has a long
+        # cushion of already-queued audio to coast on. 4096 frames (~85 ms) was
+        # not enough to cover the late spikes; 16384 (~340 ms) is. The only cost
+        # is start-up latency on a sound, which is irrelevant for looping music
+        # and there are no latency-sensitive effects.
+        #
+        # 48000 Hz matches the output device so nothing resamples on the way out.
         try:
-            pygame.mixer.init()
+            pygame.mixer.pre_init(frequency=48000, size=-16, channels=2, buffer=16384)
         except pygame.error:
             pass
 
@@ -87,9 +116,6 @@ class Application:
 
         for event in pygame.event.get():
             self._input.HandleEvent(event)
-
-            if event.type == MUSIC_END_EVENT:
-                self._audio.HandleMusicEndEvent()
 
             if active is not None:
                 active.HandleEvent(event)

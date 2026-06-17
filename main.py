@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import threading
 from engine.app import Application, AppConfig
 from game.scenes.services import GameContext
 from game.scenes.cinematic_scene import CinematicScene
@@ -25,10 +26,19 @@ def _EnsureAssets() -> None:
         ProcessAll()
 
 
+def _WarmMusic(app: Application) -> None:
+    if not app.GetAudio().IsEnabled():
+        return
+
+    for track in (theme.MUSIC_OPENING, theme.MUSIC_ANTHEM, theme.MUSIC_MATCH):
+        app.GetAssets().LoadSound(track)
+
+
 def Main() -> None:
     _EnsureAssets()
     config = AppConfig("Cabo Verde — Mundial 2026", theme.SCREEN_WIDTH, theme.SCREEN_HEIGHT, ASSET_ROOT, 60)
     app = Application(config)
+    threading.Thread(target=_WarmMusic, args=(app,), daemon=True).start()
     save_manager = SaveManager(SAVE_PATH)
     records = RecordBook(RECORDS_PATH)
     context = GameContext(app, save_manager, records)
