@@ -37,6 +37,7 @@ GRAVITY = 900.0
 
 KICKOFF_DELAY = 1.1
 GOAL_CELEBRATION = 3.0
+KEEPER_DIVE_DURATION = 0.45
 DEFAULT_DURATION = 150.0
 
 STATE_KICKOFF = "kickoff"
@@ -282,6 +283,8 @@ class Match:
 
         if player.IsMoving():
             player.run_phase += 0.18
+        elif player.is_keeper and pitch.BallInKeeperHalf(player.team_index, self.ball.pos.x):
+            player.run_phase += 0.14
 
     def _IntegratePlayers(self, dt: float) -> None:
         for player in self.players:
@@ -514,6 +517,9 @@ class Match:
         if shot:
             self.ball.pos = self.ball.pos + direction * 48.0
             self.ball.shot_immunity = 0.32
+            for keeper in self.players:
+                if keeper.is_keeper and keeper.team_index != player.team_index:
+                    keeper.kick_timer = KEEPER_DIVE_DURATION
         self.ball.vel = direction * speed
         self.ball.last_touch_team = player.team_index
         self.ball.height_vel = loft

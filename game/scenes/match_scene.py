@@ -152,14 +152,7 @@ class MatchScene(GameScene):
         facing_right = player.facing >= 0.0
 
         if player.is_keeper:
-            diving = player.vel.GetLength() > 150.0 or player.kick_timer > 0.0
-            if diving:
-                if facing_right:
-                    return sprites.keeper_dive_right
-                return sprites.keeper_dive_left
-            if facing_right:
-                return sprites.keeper_idle_right
-            return sprites.keeper_idle_left
+            return self._PickKeeperSprite(player, sprites)
 
         if player.kick_timer > 0.0:
             if facing_right:
@@ -174,6 +167,23 @@ class MatchScene(GameScene):
         if facing_right:
             return sprites.idle_right
         return sprites.idle_left
+
+    def _PickKeeperSprite(self, player: Player, sprites: TeamSprites) -> pygame.Surface:
+        facing_right = player.facing >= 0.0
+
+        if player.kick_timer > 0.0:
+            if facing_right:
+                return sprites.keeper_dive_right
+            return sprites.keeper_dive_left
+
+        if pitch.BallInKeeperHalf(player.team_index, self.match.ball.pos.x):
+            frames = sprites.keeper_run_right if facing_right else sprites.keeper_run_left
+            index = int(player.run_phase) % len(frames)
+            return frames[index]
+
+        if facing_right:
+            return sprites.keeper_idle_right
+        return sprites.keeper_idle_left
 
     def _DrawControlMarker(self, surface: pygame.Surface, screen: Vec2, height: int) -> None:
         tip_y = int(screen.y - height - 4)

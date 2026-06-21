@@ -37,6 +37,14 @@ def IsWithinMouth(y: float) -> bool:
     return GoalMouthTop() <= y <= GoalMouthBottom()
 
 
+def BallInKeeperHalf(team_index: int, ball_x: float) -> bool:
+    half = WIDTH / 2.0
+    if team_index == 0:
+        return ball_x < half
+
+    return ball_x > half
+
+
 def LeftGoalCenter() -> Vec2:
     return Vec2(0.0, HEIGHT / 2.0)
 
