@@ -48,6 +48,7 @@ class Ball:
         self.last_touch_team = -1
         self.height = 0.0
         self.height_vel = 0.0
+        self.shot_immunity = 0.0
 
     def IsLoose(self) -> bool:
         return self.owner is None

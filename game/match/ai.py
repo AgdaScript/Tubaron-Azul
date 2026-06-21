@@ -11,7 +11,6 @@ and shooting range, so the World Cup road gets genuinely harder.
 """
 
 BASE = 244.0
-SHOOT_RANGE = 360.0
 
 
 def _Speed(match, player) -> float:
@@ -69,15 +68,19 @@ def _KeeperMovement(match, player) -> Vec2:
             target_y = _Clamp(cross_y, pitch.GoalMouthTop() - 6, pitch.GoalMouthBottom() + 6)
 
     ball_in_box = box[0] <= ball.pos.x <= box[2] and box[1] <= ball.pos.y <= box[3]
-    if ball_in_box and match.PossessionTeam() != player.team_index:
+    if ball_in_box and ball.owner is None and match.PossessionTeam() != player.team_index:
         return _SteerTo(player, ball.pos, _Speed(match, player) * 1.18)
+
+    if ball_in_box and ball.owner is not None and ball.owner.team_index != player.team_index:
+        shade_y = _Clamp(ball.pos.y, pitch.GoalMouthTop() + 10, pitch.GoalMouthBottom() - 10)
+        return _SteerTo(player, Vec2(line_x, shade_y), _Speed(match, player) * 1.02)
 
     return _SteerTo(player, Vec2(line_x, target_y), _Speed(match, player) * 1.1)
 
 
 def _CarrierMovement(match, player) -> Vec2:
-    goal = pitch.AttackingGoalCenter(player.team_index)
-    target = Vec2(goal.x, _Clamp(player.pos.y, pitch.GoalMouthTop(), pitch.GoalMouthBottom()))
+    shoot_x = pitch.AttackingShootLineX(player.team_index)
+    target = Vec2(shoot_x, _Clamp(player.pos.y, pitch.GoalMouthTop(), pitch.GoalMouthBottom()))
     direction = (target - player.pos).GetNormalized()
 
     opponent = match.NearestOpponent(player)
@@ -130,12 +133,7 @@ def DecideBallAction(match, player) -> str | None:
     if player.is_keeper:
         return "clear"
 
-    goal = pitch.AttackingGoalCenter(player.team_index)
-    distance = player.pos.GetDistanceTo(goal)
-    skill = match.TeamSkill(player.team_index)
-    range_now = SHOOT_RANGE * (0.8 + 0.5 * skill)
-
-    if distance < range_now and pitch.IsWithinMouth(player.pos.y + (goal.y - player.pos.y) * 0.5):
+    if pitch.CanShootAtGoal(player.team_index, player.pos):
         return "shoot"
 
     opponent = match.NearestOpponent(player)

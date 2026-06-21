@@ -20,6 +20,9 @@ CENTER = Vec2(WIDTH / 2.0, HEIGHT / 2.0)
 
 BOX_WIDTH = 320
 BOX_HEIGHT = 520
+SMALL_BOX_WIDTH = 130
+SMALL_BOX_HEIGHT = 260
+PENALTY_SHOOT_STANDOFF = 24.0
 
 
 def GoalMouthTop() -> float:
@@ -79,3 +82,68 @@ def PenaltyBox(team_index: int) -> tuple[float, float, float, float]:
         return (0.0, top, BOX_WIDTH, bottom)
 
     return (WIDTH - BOX_WIDTH, top, WIDTH, bottom)
+
+
+def AttackingPenaltyBox(team_index: int) -> tuple[float, float, float, float]:
+    """Penalty area the team is trying to score in."""
+    top = HEIGHT / 2.0 - BOX_HEIGHT / 2.0
+    bottom = HEIGHT / 2.0 + BOX_HEIGHT / 2.0
+
+    if team_index == 0:
+        return (WIDTH - BOX_WIDTH, top, WIDTH, bottom)
+
+    return (0.0, top, BOX_WIDTH, bottom)
+
+
+def AttackingSmallBox(team_index: int) -> tuple[float, float, float, float]:
+    """Six-yard box in front of the goal being attacked."""
+    top = HEIGHT / 2.0 - SMALL_BOX_HEIGHT / 2.0
+    bottom = HEIGHT / 2.0 + SMALL_BOX_HEIGHT / 2.0
+
+    if team_index == 0:
+        return (WIDTH - SMALL_BOX_WIDTH, top, WIDTH, bottom)
+
+    return (0.0, top, SMALL_BOX_WIDTH, bottom)
+
+
+def AttackingPenaltyLineX(team_index: int) -> float:
+    """Outer edge of the penalty area (the line attackers should shoot from)."""
+    left, _, right, _ = AttackingPenaltyBox(team_index)
+    if team_index == 0:
+        return left
+
+    return right
+
+
+def AttackingShootLineX(team_index: int) -> float:
+    """Where carriers run to shoot — just inside the penalty line."""
+    line = AttackingPenaltyLineX(team_index)
+    if team_index == 0:
+        return line + PENALTY_SHOOT_STANDOFF
+
+    return line - PENALTY_SHOOT_STANDOFF
+
+
+def AttackingGoalLineX(team_index: int) -> float:
+    return AttackingGoalCenter(team_index).x
+
+
+def IsInAttackingPenaltyArea(team_index: int, pos: Vec2) -> bool:
+    left, top, right, bottom = AttackingPenaltyBox(team_index)
+    return left <= pos.x <= right and top <= pos.y <= bottom
+
+
+def IsInAttackingSmallBox(team_index: int, pos: Vec2) -> bool:
+    left, top, right, bottom = AttackingSmallBox(team_index)
+    return left <= pos.x <= right and top <= pos.y <= bottom
+
+
+def CanShootAtGoal(team_index: int, pos: Vec2) -> bool:
+    """Inside the penalty area, outside the six-yard box, aligned with the goal mouth."""
+    if not IsInAttackingPenaltyArea(team_index, pos):
+        return False
+
+    if IsInAttackingSmallBox(team_index, pos):
+        return False
+
+    return IsWithinMouth(pos.y)

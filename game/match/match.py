@@ -112,6 +112,7 @@ class Match:
         self.ball.owner = None
         self.ball.height = 0.0
         self.ball.height_vel = 0.0
+        self.ball.shot_immunity = 0.0
 
     # -- queries used by the AI -----------------------------------------
 
@@ -132,6 +133,9 @@ class Match:
             return -1
 
         return self.ball.owner.team_index
+
+    def CanShootAtGoal(self, player: Player) -> bool:
+        return pitch.CanShootAtGoal(player.team_index, player.pos)
 
     def ClosestTeammateToBall(self, team_index: int) -> Player | None:
         best = None
@@ -180,9 +184,10 @@ class Match:
         self._IntegratePlayers(dt)
         self._ResolvePlayerCollisions()
         self._TeleportSuperKeeper()
-        self._UpdateOwnership()
+        self.ball.shot_immunity = max(0.0, self.ball.shot_immunity - dt)
         self._ResolveKicks(human)
         self._UpdateBall(dt)
+        self._UpdateOwnership()
         self._CheckGoal()
 
     def _UpdateClock(self, dt: float) -> None:
@@ -282,6 +287,27 @@ class Match:
         for player in self.players:
             player.pos = player.pos + player.vel * dt
             self._ClampToField(player)
+            self._ClampAttackDepth(player)
+
+    def _ClampAttackDepth(self, player: Player) -> None:
+        if self.ball.owner is not player or player.is_keeper:
+            return
+
+        small_left, _, small_right, _ = pitch.AttackingSmallBox(player.team_index)
+        margin = PLAYER_RADIUS + 6.0
+
+        if player.team_index == 0:
+            max_x = small_left - margin
+            if player.pos.x > max_x:
+                player.pos = Vec2(max_x, player.pos.y)
+                if player.vel.x > 0.0:
+                    player.vel = Vec2(0.0, player.vel.y)
+        else:
+            min_x = small_right + margin
+            if player.pos.x < min_x:
+                player.pos = Vec2(min_x, player.pos.y)
+                if player.vel.x < 0.0:
+                    player.vel = Vec2(0.0, player.vel.y)
 
     def _ClampToField(self, player: Player) -> None:
         x = min(max(player.pos.x, PLAYER_RADIUS), pitch.WIDTH - PLAYER_RADIUS)
@@ -347,6 +373,9 @@ class Match:
             keeper.facing = -1.0
 
     def _UpdateOwnership(self) -> None:
+        if self.ball.shot_immunity > 0.0:
+            return
+
         if self.ball.height > 48.0:
             return
 
@@ -408,10 +437,10 @@ class Match:
                 self._Clear(owner)
 
     def _Shoot(self, player: Player, human: MatchInput | None) -> None:
-        goal = pitch.AttackingGoalCenter(player.team_index)
+        goal_line_x = pitch.AttackingGoalLineX(player.team_index)
         aim_y = self._rng.uniform(pitch.GoalMouthTop() + 24, pitch.GoalMouthBottom() - 24)
-        target = Vec2(goal.x, aim_y)
-        direction = (target - player.pos).GetNormalized()
+        target = Vec2(goal_line_x, aim_y)
+        direction = (target - self.ball.pos).GetNormalized()
 
         if human is not None and human.move.GetLength() > 0.3:
             direction = (direction * 0.45 + human.move.GetNormalized() * 0.55).GetNormalized()
@@ -421,7 +450,7 @@ class Match:
             spread = 0.05
 
         direction = self._ApplySpread(direction, spread)
-        self._ReleaseBall(player, direction, SHOOT_SPEED, loft=150.0)
+        self._ReleaseBall(player, direction, SHOOT_SPEED, loft=150.0, shot=True)
 
     def _Pass(self, player: Player) -> None:
         mate = self._BestPassTarget(player)
@@ -480,8 +509,11 @@ class Match:
         y = direction.x * sin_a + direction.y * cos_a
         return Vec2(x, y)
 
-    def _ReleaseBall(self, player: Player, direction: Vec2, speed: float, loft: float) -> None:
+    def _ReleaseBall(self, player: Player, direction: Vec2, speed: float, loft: float = 0.0, shot: bool = False) -> None:
         self.ball.owner = None
+        if shot:
+            self.ball.pos = self.ball.pos + direction * 48.0
+            self.ball.shot_immunity = 0.32
         self.ball.vel = direction * speed
         self.ball.last_touch_team = player.team_index
         self.ball.height_vel = loft
