@@ -61,6 +61,62 @@ def _Darken(color: Color, amount: int = 28) -> Color:
     return tuple(max(0, channel - amount) for channel in color)
 
 
+def _IsKitPixel(r: int, g: int, b: int, a: int) -> bool:
+    return a > 0 and not _IsSkin(r, g, b) and not (r < 50 and g < 50 and b < 50)
+
+
+def _RecolorKeeperDiveKit(surface: pygame.Surface, keeper: Color) -> pygame.Surface:
+    return _RecolorMask(surface, _IsKeeperYellow, keeper)
+
+
+def _PaintRunFromDivePalette(run_surface: pygame.Surface, dive_surface: pygame.Surface) -> pygame.Surface:
+    """Copy the dive sprite's kit palette onto the run animation frames."""
+    dive_kit: list[tuple[float, tuple[int, int, int, int]]] = []
+    dive_width = dive_surface.get_width()
+    dive_height = dive_surface.get_height()
+
+    for y in range(dive_height):
+        for x in range(dive_width):
+            r, g, b, a = dive_surface.get_at((x, y))
+            if not _IsKitPixel(r, g, b, a):
+                continue
+            lum = 0.3 * r + 0.59 * g + 0.11 * b
+            dive_kit.append((lum, (r, g, b, a)))
+
+    if not dive_kit:
+        return run_surface.copy()
+
+    dive_sorted = sorted(dive_kit, key=lambda entry: entry[0])
+    dive_colors = [entry[1] for entry in dive_sorted]
+
+    run_pixels: list[tuple[int, int, float]] = []
+    run_width = run_surface.get_width()
+    run_height = run_surface.get_height()
+
+    for y in range(run_height):
+        for x in range(run_width):
+            r, g, b, a = run_surface.get_at((x, y))
+            if not _IsKitPixel(r, g, b, a):
+                continue
+            lum = 0.3 * r + 0.59 * g + 0.11 * b
+            run_pixels.append((x, y, lum))
+
+    if not run_pixels:
+        return run_surface.copy()
+
+    out = run_surface.copy()
+    run_sorted = sorted(run_pixels, key=lambda entry: entry[2])
+    run_count = len(run_sorted)
+    dive_count = len(dive_colors)
+
+    for rank, (x, y, _) in enumerate(run_sorted):
+        dive_index = int(rank * dive_count / run_count) if run_count > 1 else 0
+        dive_index = min(dive_index, dive_count - 1)
+        out.set_at((x, y), dive_colors[dive_index])
+
+    return out
+
+
 def _RecolorToKeeperKit(surface: pygame.Surface, keeper: Color) -> pygame.Surface:
     """Recolour outfield-base keeper sprites to the team's keeper kit."""
     out = _RecolorMask(surface, _IsShirtBlue, keeper)
@@ -169,17 +225,22 @@ class SpriteFactory:
         idle = _RecolorMask(self._idle, _IsShirtBlue, shirt)
         kick = _RecolorMask(self._kick, _IsShirtBlue, shirt)
         keeper_idle = _RecolorToKeeperKit(self._keeper_stand_src, keeper)
-        keeper_dive = _RecolorMask(self._keeper_dive, _IsKeeperYellow, keeper)
-        keeper_beaten = _RecolorMask(self._keeper_beaten, _IsKeeperYellow, keeper)
+        keeper_dive = _RecolorKeeperDiveKit(self._keeper_dive, keeper)
+        keeper_beaten = _RecolorKeeperDiveKit(self._keeper_beaten, keeper)
         run_frames = [_RecolorMask(frame, _IsShirtBlue, shirt) for frame in self._run_frames]
-        keeper_run_frames = [_RecolorToKeeperKit(frame, keeper) for frame in self._keeper_run_src]
+
+        if team_id != "capeverde":
+            keeper_dive = _RecolorSkin(keeper_dive)
+            keeper_beaten = _RecolorSkin(keeper_beaten)
+
+        keeper_run_frames = [
+            _PaintRunFromDivePalette(frame, keeper_dive) for frame in self._keeper_run_src
+        ]
 
         if team_id != "capeverde":
             idle = _RecolorSkin(idle)
             kick = _RecolorSkin(kick)
             keeper_idle = _RecolorSkin(keeper_idle)
-            keeper_dive = _RecolorSkin(keeper_dive)
-            keeper_beaten = _RecolorSkin(keeper_beaten)
             run_frames = [_RecolorSkin(frame) for frame in run_frames]
             keeper_run_frames = [_RecolorSkin(frame) for frame in keeper_run_frames]
 
