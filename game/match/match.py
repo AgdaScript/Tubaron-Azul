@@ -108,6 +108,8 @@ class Match:
             player.kick_timer = 0.0
             player.lunge_timer = 0.0
             player.keeper_beaten_timer = 0.0
+            if player.is_keeper:
+                player.facing = self._KeeperFieldFacing(player.team_index)
 
         self.ball.pos = pitch.CENTER
         self.ball.vel = Vec2(0.0, 0.0)
@@ -278,8 +280,25 @@ class Match:
 
         player.vel = player.vel + diff
 
+    def _KeeperFieldFacing(self, team_index: int) -> float:
+        return 1.0 if team_index == 0 else -1.0
+
+    def _UpdateKeeperFacing(self, player: Player) -> None:
+        if not pitch.BallInKeeperHalf(player.team_index, self.ball.pos.x):
+            return
+
+        dx = self.ball.pos.x - player.pos.x
+        if dx > 10.0:
+            player.facing = 1.0
+        elif dx < -10.0:
+            player.facing = -1.0
+        else:
+            player.facing = self._KeeperFieldFacing(player.team_index)
+
     def _UpdateFacing(self, player: Player) -> None:
-        if player.vel.x > 18.0:
+        if player.is_keeper:
+            self._UpdateKeeperFacing(player)
+        elif player.vel.x > 18.0:
             player.facing = 1.0
         elif player.vel.x < -18.0:
             player.facing = -1.0
@@ -376,7 +395,7 @@ class Match:
             keeper.vel = Vec2(0.0, 0.0)
             keeper.kick_timer = max(keeper.kick_timer, 0.25)
             keeper.teleport_flash = 0.3
-            keeper.facing = -1.0
+            keeper.facing = self._KeeperFieldFacing(keeper.team_index)
 
     def _UpdateOwnership(self) -> None:
         if self.ball.shot_immunity > 0.0:
@@ -525,6 +544,10 @@ class Match:
             for keeper in self.players:
                 if keeper.is_keeper and keeper.team_index != player.team_index:
                     keeper.kick_timer = KEEPER_DIVE_DURATION
+                    if player.pos.x > keeper.pos.x + 8.0:
+                        keeper.facing = 1.0
+                    elif player.pos.x < keeper.pos.x - 8.0:
+                        keeper.facing = -1.0
         else:
             self.ball.pending_shot = False
         self.ball.vel = direction * speed
