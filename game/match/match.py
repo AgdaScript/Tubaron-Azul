@@ -107,6 +107,7 @@ class Match:
             player.ball_cooldown = 0.0
             player.kick_timer = 0.0
             player.lunge_timer = 0.0
+            player.keeper_beaten_timer = 0.0
 
         self.ball.pos = pitch.CENTER
         self.ball.vel = Vec2(0.0, 0.0)
@@ -114,6 +115,7 @@ class Match:
         self.ball.height = 0.0
         self.ball.height_vel = 0.0
         self.ball.shot_immunity = 0.0
+        self.ball.pending_shot = False
 
     # -- queries used by the AI -----------------------------------------
 
@@ -230,6 +232,7 @@ class Match:
     def _DecideAndSteer(self, dt: float, human: MatchInput) -> None:
         for player in self.players:
             player.kick_timer = max(0.0, player.kick_timer - dt)
+            player.keeper_beaten_timer = max(0.0, player.keeper_beaten_timer - dt)
             player.ball_cooldown = max(0.0, player.ball_cooldown - dt)
             player.lunge_timer = max(0.0, player.lunge_timer - dt)
             player.teleport_flash = max(0.0, player.teleport_flash - dt)
@@ -414,6 +417,7 @@ class Match:
 
             self.ball.owner = best
             self.ball.last_touch_team = best.team_index
+            self.ball.pending_shot = False
 
     def _ResolveKicks(self, human: MatchInput) -> None:
         owner = self.ball.owner
@@ -517,9 +521,12 @@ class Match:
         if shot:
             self.ball.pos = self.ball.pos + direction * 48.0
             self.ball.shot_immunity = 0.32
+            self.ball.pending_shot = True
             for keeper in self.players:
                 if keeper.is_keeper and keeper.team_index != player.team_index:
                     keeper.kick_timer = KEEPER_DIVE_DURATION
+        else:
+            self.ball.pending_shot = False
         self.ball.vel = direction * speed
         self.ball.last_touch_team = player.team_index
         self.ball.height_vel = loft
@@ -603,11 +610,19 @@ class Match:
             self._RegisterGoal(0)
 
     def _RegisterGoal(self, team_index: int) -> None:
+        conceding = 1 - team_index
+
+        if self.ball.pending_shot:
+            for player in self.players:
+                if player.is_keeper and player.team_index == conceding:
+                    player.keeper_beaten_timer = GOAL_CELEBRATION
+                    player.kick_timer = 0.0
+
+        self.ball.pending_shot = False
         self.score[team_index] += 1
         self.last_scorer = team_index
         self.state = STATE_GOAL
         self.state_timer = GOAL_CELEBRATION
-        conceding = 1 - team_index
         self.kickoff_team = conceding
 
         if team_index == 0:

@@ -32,6 +32,7 @@ class Player:
         self.lunge_timer = 0.0
         self.run_phase = 0.0
         self.teleport_flash = 0.0
+        self.keeper_beaten_timer = 0.0
 
     def IsMoving(self) -> bool:
         return self.vel.GetLength() > 16.0
@@ -49,6 +50,7 @@ class Ball:
         self.height = 0.0
         self.height_vel = 0.0
         self.shot_immunity = 0.0
+        self.pending_shot = False
 
     def IsLoose(self) -> bool:
         return self.owner is None

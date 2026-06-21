@@ -171,6 +171,11 @@ class MatchScene(GameScene):
     def _PickKeeperSprite(self, player: Player, sprites: TeamSprites) -> pygame.Surface:
         facing_right = player.facing >= 0.0
 
+        if player.keeper_beaten_timer > 0.0:
+            if facing_right:
+                return sprites.keeper_beaten_right
+            return sprites.keeper_beaten_left
+
         if player.kick_timer > 0.0:
             if facing_right:
                 return sprites.keeper_dive_right

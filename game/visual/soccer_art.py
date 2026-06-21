@@ -26,6 +26,7 @@ LIGHT_SKIN = (236, 198, 172)
 class TeamSprites:
     def __init__(self, idle: pygame.Surface, kick: pygame.Surface,
                  keeper_idle: pygame.Surface, keeper_dive: pygame.Surface,
+                 keeper_beaten: pygame.Surface,
                  run_frames: list[pygame.Surface], keeper_run_frames: list[pygame.Surface]) -> None:
         self.idle_right = idle
         self.idle_left = pygame.transform.flip(idle, True, False)
@@ -35,6 +36,8 @@ class TeamSprites:
         self.keeper_idle_left = pygame.transform.flip(keeper_idle, True, False)
         self.keeper_dive_right = keeper_dive
         self.keeper_dive_left = pygame.transform.flip(keeper_dive, True, False)
+        self.keeper_beaten_right = keeper_beaten
+        self.keeper_beaten_left = pygame.transform.flip(keeper_beaten, True, False)
         self.run_right = run_frames
         self.run_left = [pygame.transform.flip(frame, True, False) for frame in run_frames]
         self.keeper_run_right = keeper_run_frames
@@ -128,9 +131,11 @@ class SpriteFactory:
         base_idle = assets.LoadImage("players/outfield_idle.png")
         base_kick = _TrimRight(assets.LoadImage("players/outfield_kick.png"), 0.82)
         base_keeper = assets.LoadImage("players/keeper.png")
+        base_keeper_beaten = assets.LoadImage("players/keeper_free_hands.png")
         self._idle = _ScaleToHeight(base_idle, PLAYER_HEIGHT)
         self._kick = _ScaleToHeight(base_kick, PLAYER_HEIGHT)
         self._keeper_dive = _ScaleToHeight(base_keeper, DIVE_HEIGHT)
+        self._keeper_beaten = _ScaleToHeight(base_keeper_beaten, DIVE_HEIGHT)
         self._keeper_stand_src = _ScaleToHeight(base_idle, KEEPER_HEIGHT)
         self._keeper_run_src = [
             _ScaleToHeight(assets.LoadImage(f"player_run_frames/{index}.png"), KEEPER_HEIGHT)
@@ -150,6 +155,7 @@ class SpriteFactory:
         kick = _RecolorMask(self._kick, _IsShirtBlue, shirt)
         keeper_idle = _RecolorMask(self._keeper_stand_src, _IsShirtBlue, keeper)
         keeper_dive = _RecolorMask(self._keeper_dive, _IsKeeperYellow, keeper)
+        keeper_beaten = _RecolorMask(self._keeper_beaten, _IsKeeperYellow, keeper)
         run_frames = [_RecolorMask(frame, _IsShirtBlue, shirt) for frame in self._run_frames]
         keeper_run_frames = [_RecolorMask(frame, _IsShirtBlue, keeper) for frame in self._keeper_run_src]
 
@@ -158,9 +164,10 @@ class SpriteFactory:
             kick = _RecolorSkin(kick)
             keeper_idle = _RecolorSkin(keeper_idle)
             keeper_dive = _RecolorSkin(keeper_dive)
+            keeper_beaten = _RecolorSkin(keeper_beaten)
             run_frames = [_RecolorSkin(frame) for frame in run_frames]
             keeper_run_frames = [_RecolorSkin(frame) for frame in keeper_run_frames]
 
-        sprites = TeamSprites(idle, kick, keeper_idle, keeper_dive, run_frames, keeper_run_frames)
+        sprites = TeamSprites(idle, kick, keeper_idle, keeper_dive, keeper_beaten, run_frames, keeper_run_frames)
         self._cache[team_id] = sprites
         return sprites

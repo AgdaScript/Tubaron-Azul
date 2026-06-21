@@ -22,10 +22,51 @@ _SOURCES = [
     ("player.png", "outfield_idle.png", 460),
     ("player_kick.png", "outfield_kick.png", 460),
     ("vozinha.png", "keeper.png", 420),
+    ("assets/players/keeper_free_hands.jpeg", "keeper_free_hands.png", 420),
 ]
 
 _WHITE_CUT = 232
 _FRINGE_CUT = 238
+
+
+_BLACK_CUT = 32
+
+
+def _IsBlack(color: tuple[int, int, int, int], cut: int) -> bool:
+    return color[0] <= cut and color[1] <= cut and color[2] <= cut
+
+
+def _KeyOutBlackBackground(surface: pygame.Surface) -> None:
+    width = surface.get_width()
+    height = surface.get_height()
+    transparent = (0, 0, 0, 0)
+    visited = [[False] * width for _ in range(height)]
+    queue: deque[tuple[int, int]] = deque()
+
+    for x in range(width):
+        for y in (0, height - 1):
+            queue.append((x, y))
+
+    for y in range(height):
+        for x in (0, width - 1):
+            queue.append((x, y))
+
+    while queue:
+        x, y = queue.popleft()
+
+        if x < 0 or y < 0 or x >= width or y >= height or visited[y][x]:
+            continue
+
+        visited[y][x] = True
+
+        if not _IsBlack(surface.get_at((x, y)), _BLACK_CUT):
+            continue
+
+        surface.set_at((x, y), transparent)
+        queue.append((x + 1, y))
+        queue.append((x - 1, y))
+        queue.append((x, y + 1))
+        queue.append((x, y - 1))
 
 
 def _IsWhite(color: tuple[int, int, int, int], cut: int) -> bool:
@@ -121,7 +162,10 @@ def ProcessAll() -> None:
         path = os.path.join(PROJECT_ROOT, source)
         raw = pygame.image.load(path).convert_alpha()
         work = _ScaleToHeight(raw, target_h)
-        _KeyOutBackground(work)
+        if source.endswith("keeper_free_hands.jpeg"):
+            _KeyOutBlackBackground(work)
+        else:
+            _KeyOutBackground(work)
         cropped = _Autocrop(work)
         pygame.image.save(cropped, os.path.join(OUT_DIR, out_name))
         print(f"  {source} -> players/{out_name}  {cropped.get_size()}")
